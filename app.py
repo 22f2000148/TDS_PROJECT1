@@ -23,6 +23,9 @@ import sqlite3
 import base64
 from dateutil import parser
 from pathlib import Path
+import os
+import base64
+from openai import OpenAI
 
 
 app = FastAPI()
@@ -88,40 +91,7 @@ async def run_task(task: str = Query(...)):
         print(f"Error in run_task: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def handle_task_A2(prettier_version="prettier@3.4.2", filename="/data/format.md"):
-    subprocess.run(["npx", "prettier@3.4.2", "--write", filename], check=True)
-    """
-    Formats the specified file using the given Prettier version.
-    
-    Args:
-        prettier_version (str): The Prettier version to use (default: "prettier@3.4.2")
-        filename (str): The file to format (default: "/data/format.md")
-    
-    Returns:
-        dict: Status of the operation
-
-    command = [r"C:\Program Files\nodejs\npx.cmd", prettier_version, "--write", filename]
-    try:
-        subprocess.run(command, check=True)
-        print("Prettier executed successfully.")
-        return {"status": "success"}
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
-        return {"status": "error", "error": str(e)}
-
-# [Rest of the file remains unchanged...]
-    
-    local_path = os.path.join(os.getcwd(), path[1:])
-    
-    if not os.path.exists(local_path):
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    try:
-        with open(local_path, "r") as f:
-            content = f.read()
-        return content
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")"""
+user_email="22f2000148@ds.study.iitm.ac.in"
 
 def handle_task_A1(user_email: str):
     """
@@ -265,25 +235,34 @@ def handle_task_A1(user_email: str):
 #     except Exception as e:
 #         print(f"General error: {str(e)}")
 #         raise Exception(f"Error formatting file: {str(e)}")
-def handle_task_A2(prettier_version="prettier@3.4.2", filename="/data/format.md"):
-    """
-    Formats the specified file using the given Prettier version.
-    
-    Args:
-        prettier_version (str): The Prettier version to use (default: "prettier@3.4.2")
-        filename (str): The file to format (default: "/data/format.md")
-    
-    Returns:
-        dict: Status of the operation
-    """
-    command = [r"C:\Program Files\nodejs\npx.cmd", prettier_version, "--write", filename]
+def handle_task_A2(input_file: str):
+    input_file = get_absolute_path(input_file)
+
+    if not os.path.exists(input_file):
+        raise HTTPException(status_code=404, detail=f"File {input_file} not found.")
+
+    # ✅ Use `npx prettier` instead of trying to execute it directly
     try:
-        subprocess.run(command, check=True)
-        print("Prettier executed successfully.")
-        return {"status": "success"}
+        # ✅ Run Prettier with explicit Markdown formatting options
+        result = subprocess.run(
+            # ["npx", "prettier@3.4.2", "--stdin-filepath", input_file],
+            # capture_output=True,
+            # text=True,
+            # check=True,
+            ["npx", "prettier@3.4.2", "--write", input_file, "--prose-wrap", "preserve"],
+            capture_output=True, text=True, check=True,
+            shell=True  # Ensure shell execution works across platforms
+        )
+        
+        
+        return {"status": "success", "message": f"Formatted {input_file}"}
+    
     except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
-        return {"status": "error", "error": str(e)}
+        raise HTTPException(status_code=500, detail=f"Prettier failed: {e}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
 
 def handle_task_A3():
     """
@@ -493,9 +472,7 @@ def chat_completion(prompt):
     except Exception as e:
         print(f"Error during chat completion: {str(e)}")
         raise
-
-
-
+    
 def handle_task_A8():
     """
     Wrapper function for extracting credit card number from an image.
@@ -531,7 +508,7 @@ def handle_task_A8():
     except Exception as e:
         print(f"Error in handle_task_A8: {str(e)}")
         raise Exception(f"Error extracting credit card: {str(e)}")
-
+  
 def handle_task_A9():
     """
     Find most similar comments using embeddings
